@@ -1,30 +1,20 @@
-%==========================================================================
-% Reads YAML file, converts YAML sequences to MATLAB cell columns and YAML
-% mappings to MATLAB structs
-%
-%  filename ... name of yaml file to be imported
-%  verbose  ... verbosity level (0 or absent = no messages, 
-%                                          1 = notify imports)
-%==========================================================================
 function result = ReadYamlRaw(filename, verbose, nosuchfileaction, treatasdata)
-    if ~exist('verbose','var')
+import yaml.*;
+if ~exist('verbose','var')
         verbose = 0;
     end;
-    
     if ~exist('nosuchfileaction','var')
         nosuchfileaction = 0;
     end;
     if ~ismember(nosuchfileaction,[0,1])
         error('nosuchfileexception parameter must be 0,1 or missing.');
     end;
-    
     if(~exist('treatasdata','var'))
         treatasdata = 0;
     end;
     if ~ismember(treatasdata,[0,1])
         error('treatasdata parameter must be 0,1 or missing.');
     end;
-    
     [pth,~,~] = fileparts(mfilename('fullpath'));       
     try
         import('org.yaml.snakeyaml.*');
@@ -32,39 +22,24 @@ function result = ReadYamlRaw(filename, verbose, nosuchfileaction, treatasdata)
     catch
         dp = [pth filesep 'external' filesep 'snakeyaml-1.9.jar'];
         if not(ismember(dp, javaclasspath ('-dynamic')))
-        	javaaddpath(dp); % javaaddpath clears global variables...!?
+        	javaaddpath(dp); % javaaddpath clears global variables!?
         end
         import('org.yaml.snakeyaml.*');
     end;
-    
     setverblevel(verbose);
-    % import('org.yaml.snakeyaml.Yaml'); % import here does not affect import in load_yaml ...!?
     result = load_yaml(filename, nosuchfileaction, treatasdata);
 end
-
-%--------------------------------------------------------------------------
-% Actually performs YAML load. 
-%  - If this is a first call during recursion it changes cwd to the path of
-%  given filename and stores the old path. Then it calls the YAML parser
-%  and runs the recursive transformation. After transformation or when an
-%  error occurs, it sets cwd back to the stored value.
-%  - Otherwise just calls the parser and runs the transformation.
-%
 function result = load_yaml(inputfilename, nosuchfileaction, treatasdata)
-
-    persistent nsfe;
-
+import yaml.*;
+persistent nsfe;
     if exist('nosuchfileaction','var') %isempty(nsfe) && 
         nsfe = nosuchfileaction;
     end;
-    
     persistent tadf;
-    
     if isempty(tadf) && exist('treatasdata','var')
         tadf = treatasdata;
     end;
-   
-    yaml = org.yaml.snakeyaml.Yaml(); % It appears that Java objects cannot be persistent...!?
+    yaml = org.yaml.snakeyaml.Yaml(); % It appears that Java objects cannot be persistent!?
     if ~tadf
         [filepath, filename, fileext] = fileparts(inputfilename);
         if isempty(filepath)
@@ -99,12 +74,9 @@ function result = load_yaml(inputfilename, nosuchfileaction, treatasdata)
         cd(pathstore);    
     end;
 end
-
-%--------------------------------------------------------------------------
-% Determine node type and call appropriate conversion routine. 
-%
 function result = scan(r)
-    if isa(r, 'char')
+import yaml.*;
+if isa(r, 'char')
         result = scan_string(r);
     elseif isa(r, 'double')
         result = scan_numeric(r);
@@ -120,41 +92,25 @@ function result = scan(r)
         error(['Unknown data type: ' class(r)]);
     end;
 end
-
-%--------------------------------------------------------------------------
-% Transforms Java String to MATLAB char
-%
 function result = scan_string(r)
-    result = char(r);
+import yaml.*;
+result = char(r);
 end
-
-%--------------------------------------------------------------------------
-% Transforms Java double to MATLAB double
-%
 function result = scan_numeric(r)
-    result = double(r);
+import yaml.*;
+result = double(r);
 end
-
-%--------------------------------------------------------------------------
-% Transforms Java boolean to MATLAB logical
-%
 function result = scan_logical(r)
-    result = logical(r);
+import yaml.*;
+result = logical(r);
 end
-
-%--------------------------------------------------------------------------
-% Transforms Java Date class to MATLAB DateTime class
-%
 function result = scan_datetime(r)
-    result = DateTime(r);
+import yaml.*;
+result = DateTime(r);
 end
-
-%--------------------------------------------------------------------------
-% Transforms Java List to MATLAB cell column running scan(...) recursively
-% for all ListS items.
-%
 function result = scan_list(r)
-    result = cell(r.size(),1);
+import yaml.*;
+result = cell(r.size(),1);
     it = r.iterator();
     ii = 1;
     while it.hasNext()
@@ -163,17 +119,9 @@ function result = scan_list(r)
         ii = ii + 1;
     end;
 end
-
-%--------------------------------------------------------------------------
-% Transforms Java Map to MATLAB struct running scan(...) recursively for
-% content of every Map field.
-% When there is field, which is recognized to be the >import keyword<, an
-% attempt is made to import file given by the field content.
-%
-% The result of import is so far stored as a content of the item named 'import'.
-%
 function result = scan_map(r)
-    it = r.keySet().iterator();
+import yaml.*;
+it = r.keySet().iterator();
     while it.hasNext()
         next = it.next();
         i = next;
@@ -188,57 +136,38 @@ function result = scan_map(r)
         result={};
     end
 end
-
-%--------------------------------------------------------------------------
-% Determines whether r contains a keyword denoting import.
-%
 function result = iskw_import(r)
-    result = isequal(r, 'import');
+import yaml.*;
+result = isequal(r, 'import');
 end
-
-%--------------------------------------------------------------------------
-% Transforms input hierarchy the usual way. If the result is char, then
-% tries to load file denoted by this char. If the result is cell then tries
-% to do just mentioned for each cellS item. 
-% 
 function result = perform_import(r)
-    r = scan(r);
+import yaml.*;
+r = scan(r);
     if iscell(r) && all(cellfun(@ischar, r))
         result = cellfun(@load_yaml, r, 'UniformOutput', 0);
     elseif ischar(r)
         result = {load_yaml(r)};
     else
         disp(r);
-        error(['Importer does not unterstand given filename. '...
-               'Invalid node displayed above.']);
+        error(['Importer does not unterstand given filename. '               'Invalid node displayed above.']);
     end;
 end
-
-%--------------------------------------------------------------------------
-% Sets verbosity level for all load_yaml infos.
-%
 function setverblevel(level)
-    global verbose_readyaml;
+import yaml.*;
+global verbose_readyaml;
     verbose_readyaml = 0;
     if exist('level','var')
         verbose_readyaml = level;
     end;
 end
-
-%--------------------------------------------------------------------------
-% Returns current verbosity level.
-%
 function result = getverblevel()
-    global verbose_readyaml; 
+import yaml.*;
+global verbose_readyaml; 
     result = verbose_readyaml;
 end
-
-%--------------------------------------------------------------------------
-% For debugging purposes. Displays a message as level is more than or equal
-% the current verbosity level.
-%
 function info(level, text, value_to_display)
-    if getverblevel() >= level
+import yaml.*;
+if getverblevel() >= level
         fprintf(text);
         if exist('value_to_display','var')
             disp(value_to_display);
@@ -247,5 +176,3 @@ function info(level, text, value_to_display)
         end;
     end;
 end
-%==========================================================================
-

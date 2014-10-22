@@ -1,24 +1,13 @@
-%==========================================================================
-% Walks through a tree structure data. Whenever it finds a structure, which
-% have field named 'import' it assumes that in that field is a cell array
-% and merges all structures found in that array. Parameter verb is used for
-% debugging purposes.
-%==========================================================================
 function result = mergeimports(data, verb)
-    if ~exist('verb','var')
+import yaml.*;
+if ~exist('verb','var')
         verb = 0;
     end;
     result = recurse(data, 0, [], verb);
 end
-
-%--------------------------------------------------------------------------
-% Recursion dispatcher, calls appropriate method for cell/structure or
-% displays data if the parameter data is not of mentioned type. 
-%   addit ... for possible future use, now unused
-%   verb  ... for debugging
-%
 function result = recurse(data, level, addit, verb)
-    indent = repmat(' | ',1,level); % for debugging
+import yaml.*;
+indent = repmat(' | ',1,level); % for debugging
     if iscell(data)
         result = iter_cell(data, level, addit, verb);
     elseif isstruct(data)
@@ -31,15 +20,9 @@ function result = recurse(data, level, addit, verb)
         result = data;
     end;
 end
-
-%--------------------------------------------------------------------------
-% Walks through a cell array and calls recurse on every field. 
-%   data        ... Assumed to be a cell. Data to be walked.
-%   level       ... Level in the tree, root has zero.
-%   addit, verb ... for debugging
-%
 function result = iter_cell(data, level, addit, verb)
-    indent = repmat(' | ',1,level); % for debugging
+import yaml.*;
+indent = repmat(' | ',1,level); % for debugging
     result = {};
     if any(verb == 1); fprintf([indent,'cell {\n']); end; % for debugging
     for i = 1:length(data)
@@ -48,15 +31,9 @@ function result = iter_cell(data, level, addit, verb)
     end;
     if any(verb == 1); fprintf([indent,'} cell\n']); end; % for debugging
 end
-
-%--------------------------------------------------------------------------
-% Walks through a struct and calls recurse on every field. If there is a 
-% field called 'import' it calls process_import_field on its content. Then
-% merges processed import with the rest of the structure. Meaning of all
-% parameters is similar to those of iter_cell.
-%
 function result = iter_struct(data, level, addit, verb)
-    indent = repmat(' | ',1,level); % for debugging
+import yaml.*;
+indent = repmat(' | ',1,level); % for debugging
     result = struct();
     collected_imports = {};
     if any(verb == 1); fprintf([indent,'struct {\n']); end; % for debugging
@@ -64,21 +41,12 @@ function result = iter_struct(data, level, addit, verb)
         fld = char(i);
         if any(verb == 1); fprintf([indent,' +-field ',fld,':\n']); end; % for debugging
         result.(fld) = recurse(data.(fld), level + 1, addit, verb);
-        % Tree back-pass - all potential underlying imports were processed,
-        % so process import here, if needed.
         if isequal(fld, 'import')
             processed_import = process_import_field(result.(fld));
             result = rmfield(result, 'import');
             if isstruct(processed_import)
                 collected_imports{end+1} = processed_import;
-                % It is maybe useless to collect imports to the array since
-                % there can be only one field named 'import' per structure.
-                % collected_imports is proposed to be changed to a simple 
-                % variable.
             else
-                % One of imports was not a struct. In following versions it
-                % probably won't be an error and will merge to a cell with
-                % structs.
                 disp(processed_import);
                 error('Expected struct, otherwise it cannot be merged with the rest.');
             end;
@@ -89,14 +57,9 @@ function result = iter_struct(data, level, addit, verb)
     end;
     if any(verb == 1); fprintf([indent,'} struct\n']); end; % for debugging
 end
-
-%--------------------------------------------------------------------------
-% Walks through the data parameter, which is assumed to be a cell. Merges
-% all structures in that cell and returns them as a struct or possibly as a
-% cell of merged struct and unmeregeable data.
-%
 function result = process_import_field(data)
-    if iscell(data)
+import yaml.*;
+if iscell(data)
         merged_structs = struct();
         collected_nonstruct = {};
         for i = 1:length(data)
@@ -114,11 +77,6 @@ function result = process_import_field(data)
             result = {merged_structs; collected_nonstruct};
         end;
     else
-        % For clarity and simplicity, the whole transformation is done so 
-        % that every import field in a struct is cell array even there is 
-        % only one object to be imported.
         error('BUG: import field should always contain a cell.');
     end;
 end
-
-%==========================================================================

@@ -1,3 +1,4 @@
 function result = issingle(obj)
-    result = all(size(obj) == 1) ;
+import yaml.*;
+result = all(size(obj) == 1) ;
 end

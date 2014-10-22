@@ -1,3 +1,4 @@
 function result = kwd_parent()
-    result = 'parent';
+import yaml.*;
+result = 'parent';
 end

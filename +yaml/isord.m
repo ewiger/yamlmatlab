@@ -1,3 +1,4 @@
 function result = isord(obj)
-    result = ~iscell(obj) && any(size(obj) > 1);
+import yaml.*;
+result = ~iscell(obj) && any(size(obj) > 1);
 end
